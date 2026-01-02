@@ -1,0 +1,210 @@
+# Predicted Outputs
+
+> Reduce latency by specifying parts of the response that are already known.
+
+<Tip>This feature is currently available in limited preview. To request access, please [submit a ticket](https://portal.usepylon.com/cerebras/form/support-ticket).</Tip>
+
+Predicted Outputs enable you to speed up response generation when parts of the output are already known. This is most useful when regenerating text or code that requires only minor changes. You can provide your draft using the [`prediction`](../api-reference/chat-completions#param-prediction) request parameter. The model reuses matching tokens and regenerates only those that differ, improving output generation speed.
+
+## When to Use Predicted Outputs
+
+Use Predicted Outputs in scenarios where most of the model's response is already known or can be pre-computed.
+
+Recommended use cases include:
+
+* **Code Refactoring:** Modify known code without regenerating from scratch (e.g., tab/inline completion, full-file edits, structural transformations)
+* **Document Editing:** Apply small edits to known documents (e.g., grammar fixes, tone adjustments)
+* **Template Filling:** Update placeholders or small sections in predictable structured text
+
+<Warning>
+  Predicted Outputs improves generation speed only when one or more continuous token sequences from the `prediction` field appear in the model’s response. There’s no performance benefit when the output is completely unpredictable.
+</Warning>
+
+## Usage
+
+For example, imagine you want to modify a CSS file to change the color of all body text from green to blue. To use Predicted Outputs, include the code snippet below as both part of both your prompt and the predicted output:
+
+<Steps>
+  <Step title="Initial Setup">
+    Begin by importing the Cerebras SDK and setting up the client.
+
+    <CodeGroup>
+      ```python Python theme={null}
+      import os
+      from cerebras.cloud.sdk import Cerebras
+
+      client = Cerebras(
+          api_key=os.environ.get("CEREBRAS_API_KEY"),
+      )
+      ```
+
+      ```javascript Node.js theme={null}
+      import Cerebras from '@cerebras/cerebras_cloud_sdk';
+
+      const client = new Cerebras({
+        apiKey: process.env.CEREBRAS_API_KEY,
+      });
+      ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Include expected content">
+    Include the `prediction` parameter in your chat completions request in addition to your normal `messages`. Set the `prediction` field to include the content you expect to be reused.
+
+    <CodeGroup>
+      ```python Python theme={null}
+      code = """
+      html {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+          scroll-behavior: smooth;
+          font-size: 16px;
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
+      }
+      body {
+          font-family: Georgia, serif;
+          font-size: 14px;
+          line-height: 1.8;
+          background: #000000;
+          margin: 0; 
+          padding: 0;
+          color: #00FF00; 
+      }
+      """
+
+      instructions = "Change the color to blue. Respond only with code. Don't add comments."
+
+      response = client.chat.completions.create(
+          model="gpt-oss-120b",
+          messages=[
+              {"role": "user", "content": instructions},
+              {"role": "user", "content": code}
+          ],
+          prediction={"type": "content", "content": code},
+          # stream=True,  # Uncomment to enable streaming
+      )
+
+      print(response)
+      print(response.choices[0].message.content)
+      ```
+
+      ```javascript Node.js theme={null}
+      const code = `
+      html {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+          scroll-behavior: smooth;
+          font-size: 16px;
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
+      }
+      body {
+          font-family: Georgia, serif;
+          font-size: 14px;
+          line-height: 1.8;
+          background: #000000;
+          margin: 0; 
+          padding: 0;
+          color: #00FF00; 
+      }
+      `;
+
+      const instructions = "Change the color to blue. Respond only with code. Don't add comments";
+
+      const response = await client.chat.completions.create({
+        model: "gpt-oss-120b",
+        messages: [
+          { role: "user", content: instructions },
+          { role: "user", content: code }
+        ],
+        prediction: { type: "content", content: code },
+      //   stream: true // Uncomment to enable streaming
+      });
+
+      console.log(response);
+      console.log(response.choices[0].message.content);
+      ```
+    </CodeGroup>
+  </Step>
+</Steps>
+
+In this example, most of the code remains unchanged. Only the color value needs to be updated. By providing the original code as the prediction, the model can efficiently reuse the unchanged portions.
+
+<Warning>
+  When providing a prediction, any tokens provided that are not part of the final completion will be charged at completion token rates.
+</Warning>
+
+## Token-Reuse Metrics
+
+For the best performance, your prediction should have a high token-reuse rate. The response includes usage metrics showing how many prediction tokens were accepted or rejected:
+
+```json  theme={null}
+{
+  "usage": {
+    "completion_tokens": 224,           // Number of tokens in your response (billed at output rate)
+    "prompt_tokens": 204,               // Number of input tokens (billed at input rate)
+    "total_tokens": 428,                // Prompt + Completion tokens
+    "completion_tokens_details": {
+      "accepted_prediction_tokens": 76, // Tokens from prediction successfully reused
+      "rejected_prediction_tokens": 20  // Tokens rejected and regenerated (billed at output rate)
+    }
+  }
+}
+```
+
+These usage stats tell you how efficiently your prediction worked. A high ratio of accepted to rejected tokens indicates efficient prediction reuse, resulting in faster generation with minimal cost for rejected tokens.
+
+## Best Practices
+
+* **Use this when most of the output is known**: The larger the known section, the greater the efficiency gain. Predicted Outputs work best when you can anticipate significant portions of the response.
+
+* **Set `temperature=0`**: Reduces randomness and increases the likelihood of token acceptance from your prediction.
+
+* **Keep predictions accurate**: Misaligned predictions increase rejected tokens and can slow generation speed. Ensure your prediction closely matches the expected output.
+
+* **Monitor prediction metrics**: Track accepted vs rejected tokens in the usage metadata to evaluate effectiveness.
+
+* **Fallback gracefully**: If the rejection rate is high for a class of prompts or files, fall back to a standard completion request without the prediction field.
+
+<Warning>
+  [Reasoning](/capabilities/reasoning) tokens are treated as completion tokens. When using a reasoning model with Predicted Outputs, the presence of reasoning tokens can generate a few additional `rejected_prediction_tokens`, which slightly increases cost.
+</Warning>
+
+## Limitations
+
+Please consider the following limitations when using Predicted Outputs.
+
+* The following models are currently supported: `gpt-oss-120b`
+* When you provide a prediction, any tokens that do not appear in the final completion are still billed at completion-token rates. To determine how many predicted tokens were not used, review the [`rejected_prediction_tokens`](../api-reference/chat-completions#param-rejected-prediction-tokens) property in the [`usage`](../api-reference/chat-completions#param-usage) object.
+* The following API parameters are not supported when using this feature:
+  * `logprobs`: not supported
+  * `n`: values greater than 1 are not supported
+  * `tools`: tool calling is not currently supported with Predicted Outputs
+
+## FAQ
+
+<AccordionGroup>
+  <Accordion title="Does this increase API costs?">
+    Only when predicted tokens are not accepted. Input and output tokens are billed at standard rates, while rejected prediction tokens are billed at the output token rate. Customers with dedicated endpoints are not affected by this pricing.
+  </Accordion>
+
+  <Accordion title="How do I know if my prediction was accepted?">
+    Check `accepted_prediction_tokens` and `rejected_prediction_tokens` in the response's `usage` object.
+  </Accordion>
+
+  <Accordion title="What happens if my predicted text is wrong?">
+    The model rejects mismatched tokens and regenerates them, which may reduce output generation speed and increase costs since rejected tokens are billed as additional output tokens.
+  </Accordion>
+
+  <Accordion title="Does Cerebras store prediction data?">
+    No, we do not store any prediction data.
+  </Accordion>
+</AccordionGroup>
+
+
+---
+
+> To find navigation and other pages in this documentation, fetch the llms.txt file at: https://inference-docs.cerebras.ai/llms.txt

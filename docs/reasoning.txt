@@ -1,0 +1,494 @@
+# Reasoning
+
+> Reasoning allows models to provide transparent insight into their thought process by generating reasoning tokens before producing their final response. These reasoning tokens show the step-by-step logic the model uses to arrive at its answer.
+
+<Note>
+  Reasoning capabilities are currently available for the [OpenAI GPT OSS](/models/openai-oss) (`gpt-oss-120b`) and [Z.ai GLM 4.6](/models/zai-glm-46) (`zai-glm-4.6`) models. Each model uses different parameters to control reasoning.
+</Note>
+
+## Reasoning with OpenAI GPT OSS
+
+Use the **`reasoning_effort`** parameter to control the amount of reasoning the model performs.
+
+<Steps>
+  <Step title="Initial Setup">
+    Begin by importing the Cerebras SDK and setting up the client.
+
+    <CodeGroup>
+      ```python Python theme={null}
+      import os
+      from cerebras.cloud.sdk import Cerebras
+
+      client = Cerebras(
+          # This is the default and can be omitted
+          api_key=os.environ.get("CEREBRAS_API_KEY"),
+      )
+      ```
+
+      ```javascript Node.js theme={null}
+      import Cerebras from 'cerebras_cloud_sdk';
+
+      const client = new Cerebras({
+        apiKey: process.env['CEREBRAS_API_KEY'], // This is the default and can be omitted
+      });
+      ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Using Reasoning with reasoning_effort">
+    Set the `reasoning_effort` parameter within the `chat.completions.create` method to control reasoning capabilities.
+
+    <CodeGroup>
+      ```python Python {21} theme={null}
+      completion_create_response = client.chat.completions.create(
+        messages=[
+            {
+                "role": "system",
+                "content": "You are a helpful assistant."
+            },
+            {
+                "role": "user",
+                "content": "Say hello to the world."
+            },
+            {
+                "role": "assistant",
+                "content": "Hello, world! 🌍"
+            }
+        ],
+        model="gpt-oss-120b",
+        stream=False,
+        max_completion_tokens=65536,
+        temperature=1,
+        top_p=1,
+        reasoning_effort="medium"
+      )
+
+      print(completion_create_response)
+      ```
+
+      ```python Python w/ Streaming {21} theme={null}
+      stream = client.chat.completions.create(
+          messages=[
+              {
+                  "role": "system",
+                  "content": "You are a helpful assistant."
+              },
+              {
+                  "role": "user",
+                  "content": "Say hello to the world."
+              },
+              {
+                  "role": "assistant",
+                  "content": "Hello, world! 🌍"
+              }
+          ],
+          model="gpt-oss-120b",
+          stream=True,
+          max_completion_tokens=65536,
+          temperature=1,
+          top_p=1,
+          reasoning_effort="medium"
+      )
+
+      for chunk in stream:
+        print(chunk.choices[0].delta.content or "", end="")
+      ```
+
+      ```javascript Node.js {22} theme={null}
+      async function main() {
+        const completionCreateResponse = await cerebras.chat.completions.create({
+            messages: [
+                {
+                    "role": "system",
+                    "content": "You are a helpful assistant."
+                },
+                {
+                    "role": "user",
+                    "content": "Say hello to the world."
+                },
+                {
+                    "role": "assistant",
+                    "content": "Hello, world! 🌍"
+                }
+            ],
+            model: 'gpt-oss-120b',
+            stream: false,
+            max_completion_tokens: 65536,
+            temperature: 1,
+            top_p: 1,
+            reasoning_effort: "medium"
+        });
+
+        console.log(completionCreateResponse);
+        }
+
+        main();
+      ```
+
+      ```javascript Node.js w/ Streaming {22} theme={null}
+      async function main() {
+        const stream = await cerebras.chat.completions.create({
+          messages: [
+              {
+                  "role": "system",
+                  "content": "You are a helpful assistant."
+              },
+              {
+                  "role": "user",
+                  "content": "Say hello to the world."
+              },
+              {
+                  "role": "assistant",
+                  "content": "Hello, world! 🌍"
+              }
+          ],
+          model: 'gpt-oss-120b',
+          stream: true,
+          max_completion_tokens: 65536,
+          temperature: 1,
+          top_p: 1,
+          reasoning_effort: "medium"
+
+        });
+
+        for await (const chunk of stream) {
+          process.stdout.write(chunk.choices[0]?.delta?.content || '');
+        }
+      }
+
+      main();
+      ```
+    </CodeGroup>
+  </Step>
+</Steps>
+
+### Reasoning Effort Levels
+
+<Note>
+  This applies only to `gpt-oss-120b`.
+</Note>
+
+The `reasoning_effort` parameter accepts the following values:
+
+* `"low"` - Minimal reasoning, faster responses
+* `"medium"` - Moderate reasoning (default)
+* `"high"` - Extensive reasoning, more thorough analysis
+
+## Reasoning with Z.ai GLM 4.6
+
+Use the **`disable_reasoning`** parameter to toggle reasoning on or off.
+
+<Note>
+  There are key differences between the OpenAI client and the Cerebras SDK when using non-standard OpenAI parameters. This example uses the Cerebras SDK. For more info, see [Passing Non-Standard Parameters](/resources/openai#passing-non-standard-parameters).
+</Note>
+
+<Steps>
+  <Step title="Initial Setup">
+    Begin by importing the Cerebras SDK and setting up the client.
+
+    <CodeGroup>
+      ```python Python theme={null}
+      import os
+      from cerebras.cloud.sdk import Cerebras
+
+      client = Cerebras(
+          # This is the default and can be omitted
+          api_key=os.environ.get("CEREBRAS_API_KEY"),
+      )
+      ```
+
+      ```javascript Node.js theme={null}
+      import Cerebras from 'cerebras_cloud_sdk';
+
+      const client = new Cerebras({
+        apiKey: process.env['CEREBRAS_API_KEY'], // This is the default and can be omitted
+      });
+      ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Using Reasoning with disable_reasoning">
+    Set the `disable_reasoning` parameter within the `chat.completions.create` method to control reasoning. Set to `true` to disable reasoning, or `false` (or omit) to enable it.
+
+    <CodeGroup>
+      ```python Python {11} theme={null}
+      completion_create_response = client.chat.completions.create(
+        messages=[
+            {
+                "role": "user",
+                "content": "Explain how photosynthesis works."
+            }
+        ],
+        model="zai-glm-4.6",
+        stream=False,
+        max_completion_tokens=65536,
+        disable_reasoning=False  # Set to True to disable reasoning
+      )
+
+      print(completion_create_response)
+      ```
+
+      ```python Python w/ Streaming {11} theme={null}
+      stream = client.chat.completions.create(
+          messages=[
+              {
+                  "role": "user",
+                  "content": "Explain how photosynthesis works."
+              }
+          ],
+          model="zai-glm-4.6",
+          stream=True,
+          max_completion_tokens=65536,
+          disable_reasoning=False  # Set to True to disable reasoning
+      )
+
+      for chunk in stream:
+        print(chunk.choices[0].delta.content or "", end="")
+      ```
+
+      ```javascript Node.js {12} theme={null}
+      async function main() {
+        const completionCreateResponse = await cerebras.chat.completions.create({
+            messages: [
+                {
+                    "role": "user",
+                    "content": "Explain how photosynthesis works."
+                }
+            ],
+            model: 'zai-glm-4.6',
+            stream: false,
+            max_completion_tokens: 65536,
+            disable_reasoning: false  // Set to true to disable reasoning
+        });
+
+        console.log(completionCreateResponse);
+        }
+
+        main();
+      ```
+
+      ```javascript Node.js w/ Streaming {12} theme={null}
+      async function main() {
+        const stream = await cerebras.chat.completions.create({
+          messages: [
+              {
+                  "role": "user",
+                  "content": "Explain how photosynthesis works."
+              }
+          ],
+          model: 'zai-glm-4.6',
+          stream: true,
+          max_completion_tokens: 65536,
+          disable_reasoning: false  // Set to true to disable reasoning
+
+        });
+
+        for await (const chunk of stream) {
+          process.stdout.write(chunk.choices[0]?.delta?.content || '');
+        }
+      }
+
+      main();
+      ```
+    </CodeGroup>
+  </Step>
+</Steps>
+
+## Accessing Reasoning Tokens
+
+When reasoning is enabled, the model's internal thought process is included in the response format. The structure differs depending on whether you're using streaming or non-streaming responses.
+
+### Non-Streaming Responses
+
+In non-streaming responses, the reasoning content is included in a `reasoning` field within the message:
+
+```json  theme={null}
+{
+  "id": "chatcmpl-xxx",
+  "object": "chat.completion",
+  "choices": [
+    {
+      "message": {
+        "role": "assistant",
+        "content": "Hello, World!",
+        "reasoning": "The user is asking for a simple greeting to the world."
+      }
+    }
+  ]
+}
+```
+
+### Streaming Responses
+
+When using streaming with reasoning models, reasoning tokens are delivered in the `reasoning` field of the delta for models that support it:
+
+```json  theme={null}
+{
+  "choices": [
+    {
+      "delta": {
+        "reasoning": " should"
+      },
+      "index": 0
+    }
+  ]
+}
+```
+
+## Reasoning Context Retention
+
+Reasoning tokens are not automatically retained across requests. If you want the model to maintain awareness of its prior reasoning, you'll need to pass the reasoning tokens back into the conversation manually.
+
+To do this, include the reasoning text in the `content` field of an `assistant` message in your next request, alongside the assistant's answer.
+
+For example:
+
+<Tabs>
+  <Tab title="Non-Streaming">
+    <CodeGroup>
+      ```python Python {12-13} theme={null}
+      completion_create_response = client.chat.completions.create(
+          messages=[
+              {
+                  "role": "system",
+                  "content": "You are a helpful assistant."
+              },
+              {
+                  "role": "user",
+                  "content": "Explain the difference between supervised and unsupervised learning."
+              },
+              {
+                  "role": "assistant",
+                  "content": "Supervised learning uses labeled data…<answer>Supervised learning is…</answer>"
+              },
+              {
+                  "role": "user",
+                  "content": "Can you give an example?"
+              }
+          ],
+          model="gpt-oss-120b",
+          stream=False,
+          max_completion_tokens=65536,
+          temperature=1,
+          top_p=1,
+          reasoning_effort="medium"
+      )
+
+      print(completion_create_response)
+      ```
+
+      ```javascript Node.js {13-14} theme={null}
+      async function main() {
+        const completionCreateResponse = await cerebras.chat.completions.create({
+          messages: [
+              {
+                  "role": "system",
+                  "content": "You are a helpful assistant."
+              },
+              {
+                  "role": "user",
+                  "content": "Explain the difference between supervised and unsupervised learning."
+              },
+              {
+                  "role": "assistant",
+                  "content": "Supervised learning uses labeled data…<answer>Supervised learning is…</answer>"
+              },
+              {
+                  "role": "user",
+                  "content": "Can you give an example?"
+              }
+          ],
+          model: 'gpt-oss-120b',
+          stream: false,
+          max_completion_tokens: 65536,
+          temperature: 1,
+          top_p: 1,
+          reasoning_effort: "medium"
+        });
+
+        console.log(completionCreateResponse);
+      }
+
+      main();
+      ```
+    </CodeGroup>
+  </Tab>
+
+  <Tab title="Streaming">
+    <CodeGroup>
+      ```python Python {12-13} theme={null}
+      stream = client.chat.completions.create(
+       messages=[
+           {
+               "role": "system",
+               "content": "You are a helpful assistant."
+           },
+           {
+               "role": "user",
+               "content": "Explain the difference between supervised and unsupervised learning."
+           },
+           {
+               "role": "assistant",
+               "content": "Supervised learning uses labeled data…<answer>Supervised learning is…</answer>"
+           },
+           {
+               "role": "user",
+               "content": "Can you give an example?"
+           }
+       ],
+       model="gpt-oss-120b",
+       stream=True,
+       max_completion_tokens=65536,
+       temperature=1,
+       top_p=1,
+       reasoning_effort="medium"
+      )
+
+      for chunk in stream:
+      print(chunk.choices[0].delta.content or "", end="")
+      ```
+
+      ```javascript Node.js {13-14} theme={null}
+       async function main() {
+         const stream = await cerebras.chat.completions.create({
+           messages: [
+               {
+                   "role": "system",
+                   "content": "You are a helpful assistant."
+               },
+               {
+                   "role": "user",
+                   "content": "Explain the difference between supervised and unsupervised learning."
+               },
+               {
+                   "role": "assistant",
+                   "content": "Supervised learning uses labeled data…<answer>Supervised learning is…</answer>"
+               },
+               {
+                   "role": "user",
+                   "content": "Can you give an example?"
+               }
+           ],
+           model: 'gpt-oss-120b',
+           stream: true,
+           max_completion_tokens: 65536,
+           temperature: 1,
+           top_p: 1,
+           reasoning_effort: "medium"
+         });
+
+         for await (const chunk of stream) {
+           process.stdout.write(chunk.choices[0]?.delta?.content || '');
+         }
+       }
+
+       main();
+      ```
+    </CodeGroup>
+  </Tab>
+</Tabs>
+
+
+---
+
+> To find navigation and other pages in this documentation, fetch the llms.txt file at: https://inference-docs.cerebras.ai/llms.txt

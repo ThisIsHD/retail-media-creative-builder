@@ -1,0 +1,135 @@
+# OpenAI Compatibility
+
+> Use the OpenAI Client Libraries with Cerebras Inference
+
+We designed the Cerebras API to be mostly compatible with OpenAI's client libraries, making it simple to configure your existing applications to run on Cerebras and take advantage of our inference capabilities.
+
+We also offer dedicated Cerebras Python and Cerebras TypeScript SDKs.
+
+## Configuring OpenAI to Use Cerebras API
+
+To start using Cerebras with OpenAI's client libraries, simply pass your Cerebras API key to the `apiKey` parameter and change the `baseURL` to [https://api.cerebras.ai/v1](https://api.cerebras.ai/v1):
+
+<CodeGroup>
+  ```python Python theme={null}
+  import os
+  import openai
+
+  client = openai.OpenAI(
+      base_url="https://api.cerebras.ai/v1",
+      api_key=os.environ.get("CEREBRAS_API_KEY")
+  )
+  ```
+
+  ```javascript Node.js theme={null}
+  import OpenAI from "openai";
+
+  const client = new OpenAI({
+    apiKey: process.env.CEREBRAS_API_KEY,
+    baseURL: "https://api.cerebras.ai/v1"
+  });
+  ```
+</CodeGroup>
+
+## Developer-Level Instructions via System Role
+
+<Note>This info is only applicable to the `gpt-oss-120b` model. </Note>
+
+For `gpt-oss-120b`, our API maps the `system` role to a developer-level instruction layer in the prompt hierarchy. When you send messages with `role: "system"`, these are elevated above normal user instructions and injected into the model’s internal system prompt. This gives you significant control over the assistant’s tone, style, and behavior while preserving the model’s built-in safety guardrails.
+
+### Key Differences from OpenAI
+
+OpenAI’s API distinguishes between `system` and `developer` roles. Our implementation does not expose `developer` directly. Instead, your system messages act at the developer level, meaning they have stronger influence than in OpenAI’s API.
+
+As a result, the same prompt may yield different behavior here compared to OpenAI. This is expected.
+
+## Passing Non-Standard Parameters
+
+* **OpenAI**: Non-standard OpenAI parameters (e.g., `disable_reasoning` for Z.ai GLM 4.6) need to be passed through `extra_body`.
+* **Cerebras SDK**: These non-standard parameters can be passed in **either** `extra_body` **or** as regular parameters like `model`.
+
+<Accordion title="Example: Using the OpenAI Client">
+  When using the OpenAI client with Cerebras API, non-standard parameters must be passed through `extra_body`:
+
+  <CodeGroup>
+    ```python Python theme={null}
+    client = OpenAI(
+        base_url="https://api.cerebras.ai/v1",
+        api_key=os.environ.get("CEREBRAS_API_KEY")
+    )
+
+    response = client.chat.completions.create(
+        model="zai-glm-4.6",
+        messages=[...],
+        extra_body={
+            "disable_reasoning": True
+        }
+    )
+    ```
+
+    ```javascript Node.js theme={null}
+    const client = new OpenAI({
+        baseURL: "https://api.cerebras.ai/v1",
+        apiKey: process.env.CEREBRAS_API_KEY
+    });
+
+    const response = await client.chat.completions.create({
+        model: "zai-glm-4.6",
+        messages: [...],
+        extra_body: {
+            disable_reasoning: true
+        }
+    });
+    ```
+  </CodeGroup>
+</Accordion>
+
+<Accordion title="Example: Using the Cerebras SDK Client">
+  When using the Cerebras SDK client, non-standard parameters can be passed as regular parameters:
+
+  <CodeGroup>
+    ```python Python theme={null}
+    client = Cerebras(
+        api_key=os.environ.get("CEREBRAS_API_KEY")
+    )
+
+    response = client.chat.completions.create(
+        model="zai-glm-4.6",
+        messages=[...],
+        disable_reasoning=True
+    )
+    ```
+
+    ```javascript Node.js theme={null}
+    const client = new Cerebras({
+        apiKey: process.env.CEREBRAS_API_KEY
+    });
+
+    const response = await client.chat.completions.create({
+        model: "zai-glm-4.6",
+        messages: [...],
+        disable_reasoning: true
+    });
+    ```
+  </CodeGroup>
+</Accordion>
+
+## Currently Unsupported OpenAI Features
+
+Note that although Cerebras API is mostly OpenAI compatible, there are a few features we don't support just yet:
+
+**Text Completions**\
+The following fields are currently not supported and will result in a 400 error if they are supplied:
+
+* `frequency_penalty`
+* `logit_bias`
+* `presence_penalty`
+* `service_tier`
+
+**Streaming with JSON Mode**\
+While Cerebras supports a `stream` parameter, note that streaming is not supported when using reasoning models with JSON mode or tool calling. Streaming is supported for `gpt-oss-120b`, `zai-glm-4.6`, and non-reasoning models with these features.
+
+
+---
+
+> To find navigation and other pages in this documentation, fetch the llms.txt file at: https://inference-docs.cerebras.ai/llms.txt

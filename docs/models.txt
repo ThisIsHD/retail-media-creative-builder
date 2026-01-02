@@ -1,0 +1,68 @@
+# Supported Models
+
+## Production Models
+
+Production models are fully supported offerings intended for use in production environments.
+
+| Model Name                            | Model ID        | Parameters  | Speed (tokens/s) |
+| :------------------------------------ | :-------------- | :---------- | :--------------- |
+| [Llama 3.1 8B](/models/llama-31-8b)   | `llama3.1-8b`   | 8 billion   | \~2200           |
+| [Llama 3.3 70B](/models/llama-33-70b) | `llama-3.3-70b` | 70 billion  | \~2100           |
+| [OpenAI GPT OSS](/models/openai-oss)  | `gpt-oss-120b`  | 120 billion | \~3000           |
+| [Qwen 3 32B](/models/qwen-3-32b)      | `qwen-3-32b`    | 32 billion  | \~2600           |
+
+## Preview Models
+
+Preview models are hosted on Cerebras with full accuracy and performance. Please note that these preview models are intended for evaluation purposes only and should not be used in production, as they may be discontinued with short notice.
+
+| Model Name                                       | Model ID                         | Parameters  | Speed (tokens/s) |
+| :----------------------------------------------- | :------------------------------- | :---------- | :--------------- |
+| [Qwen 3 235B Instruct](/models/qwen-3-235b-2507) | `qwen-3-235b-a22b-instruct-2507` | 235 billion | \~1400           |
+| [Z.ai GLM 4.6 <sup>1</sup>](/models/zai-glm-46)  | `zai-glm-4.6`                    | 357 billion | \~1000           |
+
+<Tip>
+  <sup>1</sup> Migrating from another model? Check out our [GLM 4.6 Migration Guide](/resources/glm-46-migration) for prompt optimization tips and best practices.
+</Tip>
+
+## Model Compression
+
+We host a variety of open-source models from the community. You can refer to the links provided below for the exact architectures and weights that we serve. This section provides transparency about the compression state of each model available on our platform.
+
+We do not currently host pruned models on our public endpoints. All models served through our public endpoints are the original, unpruned versions. While we conduct research on pruning techniques like REAP (Router-weighted Expert Activation Pruning), these pruned models are shared with the research community on Hugging Face but are not available through our shared API. You can read more about REAP in our [research blog](https://www.cerebras.ai/blog/reap).
+
+The table below shows the precision state for each model available on our platform. **All models listed are unpruned.**
+
+| Model Name                       | Precision                           | Hugging Face Link                                                   |
+| :------------------------------- | :---------------------------------- | :------------------------------------------------------------------ |
+| `llama3.1-8b`                    | FP16                                | [View →](https://huggingface.co/meta-llama/Llama-3.1-8B-Instruct)   |
+| `llama-3.3-70b`                  | FP16                                | [View →](https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct)  |
+| `gpt-oss-120b`                   | FP16/FP8 (weights only)<sup>1</sup> | [View →](https://huggingface.co/openai/gpt-oss-120b)                |
+| `qwen-3-32b`                     | FP16                                | [View →](https://huggingface.co/Qwen/Qwen3-32B)                     |
+| `qwen-3-235b-a22b-instruct-2507` | FP16/FP8 (weights only)<sup>1</sup> | [View →](https://huggingface.co/Qwen/Qwen3-235B-A22B-Instruct-2507) |
+| `zai-glm-4.6`                    | FP16/FP8 (weights only)<sup>1</sup> | [View →](https://huggingface.co/zai-org/GLM-4.6)                    |
+
+<Note>
+  <sup>1</sup> Cerebras uses selective weight-only quantization only during storage to preserve maximal quality. This means that the weights are stored in partial FP16/FP8 (with sensitive layers stored at full precision), with dequantization on the fly, so operations are done in high precision. The activations and kv cache also remain in higher precision and unquantized.
+</Note>
+
+### Frequently Asked Questions
+
+<Accordion title="Will you change a model's compression without notice?">
+  No. We are committed to serving the original models for all existing endpoints without modification. We do not alter model architectures or compression settings. If we explore additional compression techniques like pruning in the future, these would be offered as separate endpoints with pruning-specific names, ensuring complete transparency and allowing you to choose which version best fits your needs.
+</Accordion>
+
+<Accordion title="Where can I find your REAP pruned models?">
+  Our REAP pruned models are available on Hugging Face for research and experimentation purposes: [Cerebras REAP Collection](https://huggingface.co/collections/cerebras/cerebras-reap). These models demonstrate our pruning research but are not served through our production API.
+</Accordion>
+
+<Accordion title="What are compression, quantization, and pruning?">
+  **Compression** is an umbrella term for techniques that reduce model size or computational requirements. Common compression techniques include:
+
+  * **Quantization**: Reducing the precision of numbers used to represent model weights (e.g., converting from FP16 to FP8). This reduces memory usage without changing the model's architecture.
+  * **Pruning**: Permanently removing parts of a model, like layers or experts to reduce model size. This changes the model's architecture and creates a different model.
+</Accordion>
+
+
+---
+
+> To find navigation and other pages in this documentation, fetch the llms.txt file at: https://inference-docs.cerebras.ai/llms.txt

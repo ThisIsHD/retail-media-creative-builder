@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+
+# Secrets / credentials
+client_secret.json
+*.key
+*.pem
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+
+# Artifacts
+artifacts/
+outputs/
+logs/

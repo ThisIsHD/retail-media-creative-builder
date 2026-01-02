@@ -1,0 +1,145 @@
+Gemini 3 Pro Image
+
+bookmark_border
+Preview
+
+This feature is a Generative AI Preview offering, subject to the "Pre-GA Offerings Terms" of the Google Cloud Service Specific Terms, as well as the Additional Terms for Generative AI Preview Products. For this Generative AI Preview offering, Customers may elect to use it for production or commercial purposes, disclose Generated Output to third-parties, and process personal data as outlined in the Cloud Data Processing Addendum, subject to the obligations and restrictions described in the agreement under which you access Google Cloud. Pre-GA products and features are available "as is" and might have limited support. For more information, see the launch stage descriptions.
+
+Gemini 3 Pro Image, or Gemini 3 Pro (with Nano Banana), is designed to tackle the most challenging image generation by incorporating state-of-the-art reasoning capabilities. It's the best model for complex and multi-turn image generation and editing, having improved accuracy and enhanced image quality.
+
+For more information about image generation using Gemini 3 Pro Image, see Generate and edit images with Gemini.
+
+Try in Vertex AI View in Model Garden (Preview) Deploy example app
+
+Note: To use the "Deploy example app" feature, you need a Google Cloud project with billing and Vertex AI API enabled.
+Model ID	gemini-3-pro-image-preview
+Supported inputs & outputs	
+Inputs: Text, Images
+Outputs: Text and image
+Token limits	
+Maximum input tokens: 65,536
+Maximum output tokens: 32,768
+Capabilities	
+Supported
+Grounding with Google Search
+System instructions
+Count Tokens
+Thinking
+Not supported
+Code execution
+Tuning
+Function calling
+Gemini Live API
+Implicit context caching
+Explicit context caching
+Vertex AI RAG Engine
+Chat completions
+Usage types	
+Supported
+Provisioned Throughput
+Standard PayGo
+Batch prediction
+Not supported
+Input size limit	500 MB
+Technical specifications
+Images
+Maximum images per prompt: 14
+Maximum file size per file for inline data or direct uploads through the console: 7 MB
+Maximum file size per file from Google Cloud Storage: 30 MB
+Maximum number of output images per prompt: Limited to 32,768 output tokens
+Supported aspect ratios: 1:1, 3:2, 2:3, 3:4, 4:3, 4:5, 5:4, 9:16, 16:9, and 21:9
+Supported MIME types: image/png, image/jpeg, image/webp, image/heic, image/heif
+Documents
+Maximum number of files per prompt: As supported by the 65,536 token context window
+Maximum number of pages per file: As supported by the 65,536 token context window
+Maximum file size per file: 50 MB (API and Cloud Storage imports) or 7 MB (direct upload through Google Cloud console)
+Supported MIME types: application/pdf, text/plain
+Parameter defaults
+Temperature: 0.0-2.0
+topP: 0.0-1.0 (default 0.95)
+topK: 64 (fixed)
+candidateCount: 1
+Supported regions
+Model availability
+
+(Includes Standard PayGo with Usage Tiers & Provisioned Throughput)
+
+Global
+global
+See Deployments and endpoints for more information.
+Knowledge cutoff date	January 2025
+Versions	
+gemini-3-pro-image-preview
+Launch stage: Public preview
+Release date: November 20, 2025
+Security controls
+Online prediction	
+Data residency
+CMEK
+VPC-SC
+AXT
+Batch prediction	
+Data residency
+CMEK
+VPC-SC
+AXT
+See Security controls for more information.
+Supported languages	See Supported languages.
+Pricing	See Pricing.
+
+# Sample Code:
+
+from google import genai
+from google.genai import types
+import base64
+import os
+
+def generate():
+  client = genai.Client(
+      vertexai=True,
+      api_key=os.environ.get("GOOGLE_CLOUD_API_KEY"),
+  )
+
+
+  model = "gemini-3-pro-image-preview"
+  contents = [
+    types.Content(
+      role="user",
+      parts=[
+      ]
+    )
+  ]
+
+  generate_content_config = types.GenerateContentConfig(
+    temperature = 1,
+    top_p = 0.95,
+    max_output_tokens = 32768,
+    response_modalities = ["TEXT", "IMAGE"],
+    safety_settings = [types.SafetySetting(
+      category="HARM_CATEGORY_HATE_SPEECH",
+      threshold="OFF"
+    ),types.SafetySetting(
+      category="HARM_CATEGORY_DANGEROUS_CONTENT",
+      threshold="OFF"
+    ),types.SafetySetting(
+      category="HARM_CATEGORY_SEXUALLY_EXPLICIT",
+      threshold="OFF"
+    ),types.SafetySetting(
+      category="HARM_CATEGORY_HARASSMENT",
+      threshold="OFF"
+    )],
+    image_config=types.ImageConfig(
+      aspect_ratio="1:1",
+      image_size="1K",
+      output_mime_type="image/png",
+    ),
+  )
+
+  for chunk in client.models.generate_content_stream(
+    model = model,
+    contents = contents,
+    config = generate_content_config,
+    ):
+    print(chunk.text, end="")
+
+generate()
