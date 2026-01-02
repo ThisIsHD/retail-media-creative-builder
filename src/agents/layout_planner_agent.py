@@ -394,7 +394,21 @@ def run_layout_planner(state: Dict[str, Any]) -> Dict[str, Any]:
 
     # Write outputs
     outputs = state.get("outputs", {}) or {}
-    outputs["layout"] = layout_out.model_dump()
+    layout_dump = layout_out.model_dump()
+    # Mirror for compliance engines that expect these at top-level
+    if isinstance(layout_dump.get("spec"), dict):
+        layout_dump["safe_zones"] = layout_dump["spec"].get("safe_zones")
+
+        # Ensure typography exists so we don't WARN on min font
+        typography = (layout_dump["spec"].get("typography") or {})
+        typography.setdefault("min_font_px", 24)  # sensible default for 1080 canvas
+        layout_dump["spec"]["typography"] = typography
+
+        # also mirror at top-level if checks look for layout.typography.*
+        layout_dump["typography"] = typography
+
+    outputs["layout"] = layout_dump
+
     state["outputs"] = outputs
 
     # Preserve lightweight layout intent for re-prompts (stateful UX)

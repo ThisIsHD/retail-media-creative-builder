@@ -24,9 +24,23 @@ def master_node(state: Dict[str, Any]) -> Dict[str, Any]:
     pipeline.setdefault("timings_ms", {})
     pipeline.setdefault("routing", {})
 
+    # --- normalize canonical fields (your state is DB-shaped: input.text/ui_context/attachments) ---
+    inp = state.get("input", {}) or {}
+
+    # user_text
+    if not (state.get("user_text") or "").strip():
+        state["user_text"] = (inp.get("text") or "").strip()
+
+    # ui_context
+    if not isinstance(state.get("ui_context"), dict):
+        state["ui_context"] = inp.get("ui_context") or {}
+
+    # attachments
+    if not isinstance(state.get("attachments"), list):
+        state["attachments"] = inp.get("attachments") or []
+
     state["pipeline"] = pipeline
     return state
-
 
 def copy_validator_node(state: Dict[str, Any]) -> Dict[str, Any]:
     pipeline = state["pipeline"]
@@ -91,7 +105,7 @@ def imageops_node(state: Dict[str, Any]) -> Dict[str, Any]:
     layout_spec = layout_output.get("spec", {})
 
     # Get assets if available
-    attachments = state.get("attachments", [])
+    attachments = state.get("attachments") or (state.get("input", {}) or {}).get("attachments") or []
     assets = {}
     for att in attachments:
         role = att.get("role")
@@ -101,7 +115,7 @@ def imageops_node(state: Dict[str, Any]) -> Dict[str, Any]:
             assets["logo_uri"] = att.get("uri")
 
     # Get selected formats from ui_context (for multi-format output)
-    ui_context = state.get("ui_context", {}) or {}
+    ui_context = state.get("ui_context") or (state.get("input", {}) or {}).get("ui_context") or {}
     selected_formats = ui_context.get("selected_formats")
 
     # Call real imageops agent
@@ -151,12 +165,16 @@ def compliance_node(state: Dict[str, Any]) -> Dict[str, Any]:
     # Extract compliance result
     compliance_status = result.get("compliance_result", "PASS")
     
+    '''
     # TEMPORARY: Force PASS if layout planner already validated (deterministic layouts are pre-validated)
     outputs = state.get("outputs", {}) or {}
     layout_output = outputs.get("layout", {})
     if layout_output.get("decision") in ("OK", "WARN"):
         compliance_status = "PASS"
         result["compliance"]["status"] = "PASS"
+    '''
+    # Strict compliance
+    outputs = state.get("outputs", {}) or {}
 
     # Write compliance result to state
     state["compliance_result"] = compliance_status
@@ -194,5 +212,5 @@ def summarizer_node(state: Dict[str, Any]) -> Dict[str, Any]:
     state = run_summarizer_agent(state)
     
     pipeline["timings_ms"]["summarizer"] = _now_ms() - t0
-    pipeline["timings_ms"]["total"] = sum(pipeline["timings_ms"].values())
+    pipeline["timings_ms"]["total"] = sum(v for k, v in pipeline["timings_ms"].items() if k != "total")
     return state

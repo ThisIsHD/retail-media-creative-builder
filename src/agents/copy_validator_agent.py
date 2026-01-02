@@ -53,7 +53,10 @@ def run_copy_validator(state: Dict[str, Any]) -> Dict[str, Any]:
       - pipeline.routing.copy_result
       - compliance_result may remain UNKNOWN here; final decision is in compliance agent.
     """
-    user_text = (state.get("user_text") or "").strip()
+    user_text = (
+        (state.get("user_text") or "")
+        or ((state.get("input") or {}).get("text") or "")
+    ).strip()
     if not user_text:
         user_text = "Generate compliant premium creative copy for a retailer campaign."
 

@@ -158,11 +158,14 @@ def route_after_copy(state: Dict[str, Any]) -> str:
     if copy_res == "PASS":
         return "layout_planner"
     
-    # Copy failed - check retry budget
-    _inc_tool_loops(state)
-    if _get_tool_loops(state) >= _get_max_tool_loops(state):
+    # Copy failed - check retry budget (without prematurely burning a loop)
+    current_loops = _get_tool_loops(state)
+    max_loops = _get_max_tool_loops(state)
+
+    if current_loops >= max_loops:
         return "summarizer"  # Give up gracefully
-    
+
+    _inc_tool_loops(state)
     return "copy_validator"  # Retry copy
 
 
@@ -176,9 +179,13 @@ def route_after_layout(state: Dict[str, Any]) -> str:
     if layout_res == "OK":
         return "imageops"
     
-    # Layout failed - check retry budget
-    _inc_tool_loops(state)
-    if _get_tool_loops(state) >= _get_max_tool_loops(state):
+    # Layout failed - check retry budget (without prematurely burning a loop)
+    current_loops = _get_tool_loops(state)
+    max_loops = _get_max_tool_loops(state)
+
+    if current_loops >= max_loops:
         return "summarizer"  # Give up gracefully
-    
+
+    _inc_tool_loops(state)
     return "layout_planner"  # Retry layout
+
