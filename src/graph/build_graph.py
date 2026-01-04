@@ -4,12 +4,12 @@ from typing import Dict, Any
 from langgraph.graph import StateGraph, START, END
 
 from src.agents.nodes_dummy import (
-    master_node,
     imageops_node,
     compliance_node,
     exporter_node,
     summarizer_node,
 )
+from src.agents.master_agent import run_master_agent
 from src.agents.copy_validator_agent import run_copy_validator
 from src.agents.layout_planner_agent import run_layout_planner
 from src.graph.routers import (
@@ -34,7 +34,7 @@ def build_graph() -> "StateGraph":
     g = StateGraph(dict)  # state is a Dict[str, Any]
 
     # Add all nodes (using real agent functions for copy/layout, node wrappers for others)
-    g.add_node("master", master_node)
+    g.add_node("master", run_master_agent)
     g.add_node("copy_validator", run_copy_validator)
     g.add_node("layout_planner", run_layout_planner)
     g.add_node("imageops", imageops_node)

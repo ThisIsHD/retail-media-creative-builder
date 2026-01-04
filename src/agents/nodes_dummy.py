@@ -165,15 +165,7 @@ def compliance_node(state: Dict[str, Any]) -> Dict[str, Any]:
     # Extract compliance result
     compliance_status = result.get("compliance_result", "PASS")
     
-    '''
-    # TEMPORARY: Force PASS if layout planner already validated (deterministic layouts are pre-validated)
-    outputs = state.get("outputs", {}) or {}
-    layout_output = outputs.get("layout", {})
-    if layout_output.get("decision") in ("OK", "WARN"):
-        compliance_status = "PASS"
-        result["compliance"]["status"] = "PASS"
-    '''
-    # Strict compliance
+    # Do not override compliance. Trust the compliance agent output.
     outputs = state.get("outputs", {}) or {}
 
     # Write compliance result to state

@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import os
+import uuid
+import hashlib
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Tuple
 
 from src.agents.imageops_schema import (
@@ -11,7 +15,7 @@ from src.agents.imageops_schema import (
 from src.tools.image_ops import remove_bg, crop_rotate, resize, contrast_wcag, compose_layers
 from src.core.ids import new_artifact_id
 from src.core.clock import utc_now
-
+from src.llms.providers.gemini_client import GeminiImageClient
 
 _FMT_TO_WH = {
     "1080x1080": (1080, 1080),
@@ -188,42 +192,67 @@ def run_imageops_agent(
     transform_plan = build_transform_plan(layout_json=layout_json, assets=assets)
     render_plan = build_render_plan_from_layout(layout_json=layout_json, assets=assets)
 
-    # Create artifact stubs for each output format
+    # --- LIVE GENERATION (Gemini / Vertex) ---
+    client = GeminiImageClient()
+
     artifacts = []
-    timestamp = utc_now().isoformat()
+    # Build prompt from layout and copy information
+    # Extract text from layout layers for better prompt
+    layout_layers = layout_json.get("layers", [])
+    text_parts = []
+    for layer in layout_layers:
+        if layer.get("type") in {"headline", "subhead", "cta"}:
+            text = layer.get("text", "")
+            if text:
+                text_parts.append(text)
     
+    # Build a descriptive prompt for image generation
+    prompt_parts = ["Generate a premium retail media creative"]
+    if text_parts:
+        prompt_parts.append(f"with text: {', '.join(text_parts)}")
+    if assets.get("packshot_uri"):
+        prompt_parts.append("featuring a product packshot")
+    prompt_parts.append("with professional layout, logo, headline, and CTA button.")
+    
+    prompt = " ".join(prompt_parts)
+
     for fmt in output_formats:
-        artifact_id = new_artifact_id()
-        mime = "image/png" if assets.get("packshot_uri") else "image/jpeg"
-        
+        # Generate image using Gemini with format hint for proper aspect ratio
+        img_bytes, mime, meta = client.generate_image(
+            prompt=prompt,
+            model=provider_name,
+            format_hint=fmt
+        )
+
+        # Write locally (exporter can upload later if needed)
+        out_path = f"artifacts/{session_id}/{turn_id}/{fmt.replace('x','_')}.png"
+        os.makedirs(os.path.dirname(out_path), exist_ok=True)
+        with open(out_path, "wb") as f:
+            f.write(img_bytes)
+
         artifacts.append({
-            "artifact_id": artifact_id,
+            "artifact_id": f"art_{uuid.uuid4().hex[:16]}",
             "type": "image",
             "format": fmt,
-            "uri": f"gcs://stub-bucket/{session_id}/{turn_id}/{artifact_id}.{mime.split('/')[-1]}",
+            "uri": f"file://{os.path.abspath(out_path)}",
             "mime": mime,
-            "bytes": 420000,
-            "sha256": None,
-            "created_at": timestamp,
+            "bytes": len(img_bytes),
+            "sha256": hashlib.sha256(img_bytes).hexdigest(),
             "meta": {
                 "provider": provider_name,
-                "stub": True,
+                "stub": False,
                 "render_plan_in_db": True,
-                "transform_steps": len(transform_plan.steps),
-                "packshot_optional": assets.get("packshot_uri") is None,
-            },
+                "transform_steps": len(transform_plan.steps) if transform_plan else 0,
+                "packshot_optional": False,
+                "exported_at": datetime.now(timezone.utc).isoformat(),
+                "turn_id": turn_id,
+                "platform": layout_json.get("platform"),
+            }
         })
 
     return ImageOpsResult(
         transform_plan=transform_plan,
         render_plan=render_plan,
         artifacts=artifacts,
-        debug={
-            "layout_format": render_plan.format,
-            "layer_count": len(render_plan.layers),
-            "transform_step_count": len(transform_plan.steps),
-            "output_formats": output_formats,
-            "timestamp": timestamp,
-        }
+        debug={"live": True, "provider": provider_name},
     )
-

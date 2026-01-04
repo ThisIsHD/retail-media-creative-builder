@@ -164,7 +164,7 @@ def route_after_copy(state: Dict[str, Any]) -> str:
 
     if current_loops >= max_loops:
         return "summarizer"  # Give up gracefully
-
+    
     _inc_tool_loops(state)
     return "copy_validator"  # Retry copy
 
@@ -185,7 +185,7 @@ def route_after_layout(state: Dict[str, Any]) -> str:
 
     if current_loops >= max_loops:
         return "summarizer"  # Give up gracefully
-
+    
     _inc_tool_loops(state)
     return "layout_planner"  # Retry layout
 

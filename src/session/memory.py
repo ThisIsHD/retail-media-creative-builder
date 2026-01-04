@@ -30,7 +30,7 @@ class SessionMemoryStore:
         return {
             "messages": [],               # list[{role, content, ts}]
             "summary": "",                # optional, can be filled later by summarizer agent
-            "constraints": [],            # list[str] stable preferences, brand rules, etc.
+            "constraints": {},            # dict[str, Any] stable preferences, brand rules, etc. (matches state.py schema)
             "last_updated": _utcnow().isoformat(),
         }
 
@@ -63,12 +63,15 @@ class SessionMemoryStore:
 
         return memory
 
-    def add_constraint(self, memory: Dict[str, Any], constraint: str) -> Dict[str, Any]:
+    def add_constraint(self, memory: Dict[str, Any], constraint_key: str, constraint_value: Any = True) -> Dict[str, Any]:
+        """
+        Add a constraint to memory. Constraints are stored as a dict to match state.py schema.
+        """
         if memory is None:
             memory = self.init_memory()
-        constraints = list(memory.get("constraints", []))
-        if constraint and constraint not in constraints:
-            constraints.append(constraint)
+        constraints = dict(memory.get("constraints", {}))
+        if constraint_key:
+            constraints[constraint_key] = constraint_value
         memory["constraints"] = constraints
         memory["last_updated"] = _utcnow().isoformat()
         return memory

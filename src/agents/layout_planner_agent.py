@@ -1,8 +1,13 @@
 from __future__ import annotations
 
 import re
+import time
 import uuid
 from typing import Any, Dict, List, Optional, Tuple
+
+
+def _now_ms() -> int:
+    return int(time.time() * 1000)
 
 from src.agents.layout_schema import (
     LayoutOutput,
@@ -386,6 +391,9 @@ def run_layout_planner(state: Dict[str, Any]) -> Dict[str, Any]:
     if isinstance(mem, dict):
         prior_layout = mem.get("layout")
 
+    # Track timing
+    t0 = _now_ms()
+    
     layout_out = _derive_layout_for_platform(
         platform=platform,
         user_prompt=user_prompt,
@@ -422,10 +430,17 @@ def run_layout_planner(state: Dict[str, Any]) -> Dict[str, Any]:
     }
     state["memory"] = memory
 
-    # Update pipeline routing
+    # Update pipeline routing and track agent run
     pipeline = state.get("pipeline", {}) or {}
     pipeline.setdefault("routing", {})
+    pipeline.setdefault("agents_run", [])
+    pipeline.setdefault("timings_ms", {})
+    
+    if "layout_planner" not in pipeline["agents_run"]:
+        pipeline["agents_run"].append("layout_planner")
     pipeline["routing"]["layout_result"] = layout_out.decision
+    pipeline["timings_ms"]["layout_planner"] = _now_ms() - t0
+    
     state["pipeline"] = pipeline
 
     return state

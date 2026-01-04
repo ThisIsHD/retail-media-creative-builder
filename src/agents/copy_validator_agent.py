@@ -1,12 +1,17 @@
 from __future__ import annotations
 
 import json
+import time
 from typing import Any, Dict
 
 from pydantic import ValidationError
 
 from src.agents.schemas import CopyOutput
 from src.llms.providers.cerebras_client import CerebrasLLM
+
+
+def _now_ms() -> int:
+    return int(time.time() * 1000)
 
 
 COPY_VALIDATOR_SYSTEM = """You are a retail-media creative compliance copy validator.
@@ -60,6 +65,9 @@ def run_copy_validator(state: Dict[str, Any]) -> Dict[str, Any]:
     if not user_text:
         user_text = "Generate compliant premium creative copy for a retailer campaign."
 
+    # Track timing
+    t0 = _now_ms()
+    
     llm = CerebrasLLM()
 
     messages = [
@@ -118,9 +126,16 @@ def run_copy_validator(state: Dict[str, Any]) -> Dict[str, Any]:
     outputs.setdefault("copy_out", {})
     outputs["copy_out"] = out.model_dump()
 
+    # Track agent run and timing
     pipeline = state.get("pipeline", {}) or {}
     pipeline.setdefault("routing", {})
+    pipeline.setdefault("agents_run", [])
+    pipeline.setdefault("timings_ms", {})
+    
+    if "copy_validator" not in pipeline["agents_run"]:
+        pipeline["agents_run"].append("copy_validator")
     pipeline["routing"]["copy_result"] = out.decision
+    pipeline["timings_ms"]["copy_validator"] = _now_ms() - t0
 
     state["outputs"] = outputs
     state["pipeline"] = pipeline
